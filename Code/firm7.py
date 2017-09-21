@@ -131,6 +131,22 @@ def get_firmobjects(w, z, kvec, alpha_k, alpha_l, delta, psi, sizez, sizek):
 
     return op, e, l_d, y
 
+@numba.jit
+def ex_finance(e,n0,n1):
+
+    '''
+    -------------------------------------------------------------------------
+    Compute costs of external finance
+    -------------------------------------------------------------------------
+
+    -------------------------------------------------------------------------
+    '''
+    cost = np.empty_like(e)
+    for i in range(sizez):
+        for j in range(sizek):
+            for k in range(sizek):
+                cost[i,j,k] = np.clip(n0 + n1*e[i,j,k], 0)
+    return result
 
 def VFI(e, betafirm, delta, kvec, Pi, sizez, sizek):
     '''
@@ -245,7 +261,8 @@ def GE_loop(w, *args):
     alpha_k, alpha_l, delta, betafirm, kvec, z, Pi, sizek, sizez, h = args
     op, e, l_d, y = get_firmobjects(w, z, kvec, alpha_k, alpha_l, delta, psi,
                                     sizez, sizek)
-    VF, PF, optK, optI = VFI(e, betafirm, delta, kvec, Pi, sizez, sizek)
+    cost = ex_finance(e, n0, n1)
+    VF, PF, optK, optI = VFI(e, cost, betafirm, delta, kvec, Pi, sizez, sizek)
     Gamma = find_SD(PF, Pi, sizez, sizek)
     L_d = (Gamma * l_d).sum()
     Y = (Gamma * y).sum()
@@ -405,7 +422,7 @@ Solve for general equilibrium
 start_time = time.clock()
 results = opt.bisect(GE_loop, 0.1, 2, args=(alpha_k, alpha_l, delta, betafirm,
                                             kvec, z, Pi, sizek, sizez, h),
-                     xtol=1e-4, full_output=True)
+                     xtol=1e-4, full_output=False)
 print(results)
 w = results[0]
 GE_time = time.clock() - start_time
